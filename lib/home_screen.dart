@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
 import 'add_class_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeScreen extends StatelessWidget {
   void logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
+    await Supabase.instance.client.auth.signOut();
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = FirebaseAuth.instance.currentUser?.email ?? "No email";
-
+    final userEmail = Supabase.instance.client.auth.currentUser?.email ?? "No email";
     return Scaffold(
       appBar: AppBar(
         title: Text("Skedule - Home"),
