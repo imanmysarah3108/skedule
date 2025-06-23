@@ -1,11 +1,33 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/material.dart';
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+static Future<void> init() async {
+await AwesomeNotifications().initialize(
+null,
+[
+NotificationChannel(
+channelKey: 'skedule_channel',
+channelName: 'Class Reminders',
+channelDescription: 'Reminder for class schedules',
+defaultColor: Color(0xFF9D50DD),
+ledColor: Color(0xFF9D50DD),
+importance: NotificationImportance.High,
+channelShowBadge: true,
+),
+],
+debug: true,
+);
+}
 
-  Future<void> init() async {
-    const AndroidInitializationSettings initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings settings = InitializationSettings(android: initAndroid);
-    await _flutterLocalNotificationsPlugin.initialize(settings);
-  }
+static Future<void> showTestNotification() async {
+await AwesomeNotifications().createNotification(
+content: NotificationContent(
+id: 1,
+channelKey: 'skedule_channel',
+title: 'Test Reminder',
+body: 'This is a test notification from Skedule!',
+),
+);
+}
 }
