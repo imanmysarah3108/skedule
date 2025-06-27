@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For formatting TimeOfDay
 
 class AddClassScreen extends StatefulWidget {
+  const AddClassScreen({super.key});
+
   @override
   _AddClassScreenState createState() => _AddClassScreenState();
 }
@@ -55,9 +57,9 @@ class _AddClassScreenState extends State<AddClassScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Add Class")),
+      appBar: AppBar(title: const Text("Add Class")),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: SingleChildScrollView( // Use SingleChildScrollView for scrollability if content overflows
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children horizontally
@@ -73,7 +75,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
                   });
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Location Dropdown
               _buildDropdown(
@@ -86,7 +88,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
                   });
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Class Type Dropdown
               _buildDropdown(
@@ -99,29 +101,29 @@ class _AddClassScreenState extends State<AddClassScreen> {
                   });
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Time Pickers
-              Text("Class Time", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
+              const Text("Class Time", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _buildTimePickerField(context, "Start Time", _startTime, true),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildTimePickerField(context, "End Time", _endTime, false),
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Reminder Toggle
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Enable Reminder", style: TextStyle(fontSize: 16)),
+                  const Text("Enable Reminder", style: TextStyle(fontSize: 16)),
                   Switch(
                     value: _reminderEnabled,
                     onChanged: (bool value) {
@@ -132,7 +134,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               // Save Class Button
               ElevatedButton.icon(
@@ -146,14 +148,14 @@ class _AddClassScreenState extends State<AddClassScreen> {
                   // print('Reminder Enabled: $_reminderEnabled');
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Class saved (conceptually)! Check debug console for values.")),
+                    const SnackBar(content: Text("Class saved (conceptually)! Check debug console for values.")),
                   );
                 },
-                icon: Icon(Icons.save), // Changed icon to save
-                label: Text("Save Class"),
+                icon: const Icon(Icons.save), // Changed icon to save
+                label: const Text("Save Class"),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  textStyle: TextStyle(fontSize: 18),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  textStyle: const TextStyle(fontSize: 18),
                 ),
               ),
             ],
@@ -173,8 +175,8 @@ class _AddClassScreenState extends State<AddClassScreen> {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       isEmpty: value == null,
       child: DropdownButtonHideUnderline(
@@ -201,8 +203,8 @@ class _AddClassScreenState extends State<AddClassScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.access_time),
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.access_time),
         ),
         child: Text(
           time == null ? 'Select Time' : time.format(context),
@@ -216,7 +218,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
 // Extension to add hours to TimeOfDay (for initial end time)
 extension TimeOfDayExtension on TimeOfDay {
   TimeOfDay plusHours(int hours) {
-    int totalMinutes = this.hour * 60 + this.minute + hours * 60;
+    int totalMinutes = hour * 60 + minute + hours * 60;
     int newHour = (totalMinutes ~/ 60) % 24;
     int newMinute = totalMinutes % 60;
     return TimeOfDay(hour: newHour, minute: newMinute);

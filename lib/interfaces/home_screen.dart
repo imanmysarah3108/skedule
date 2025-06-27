@@ -6,6 +6,8 @@ import 'add_subject_screen.dart';  // The screen for adding Subject Name and Tea
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -23,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 200),
     );
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
   }
@@ -66,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await Supabase.instance.client.auth.signOut();
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => LoginScreen()),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (Route<dynamic> route) => false,
     );
   }
@@ -93,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: FadeTransition( // Fade animation for buttons
         opacity: _animation,
         child: Container( // Wrap in Container for margin
-          margin: EdgeInsets.symmetric(vertical: 6.0), // Spacing between buttons
+          margin: const EdgeInsets.symmetric(vertical: 6.0), // Spacing between buttons
           child: FloatingActionButton.extended(
             heroTag: label, // Unique tag for each FAB
             onPressed: () {
@@ -112,10 +114,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Skedule - Home"),
+        title: const Text("Skedule - Home"),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () => logout(context),
             tooltip: "Logout",
           ),
@@ -125,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Welcome, $userName!", style: TextStyle(fontSize: 18)),
+            Text("Welcome, $userName!", style: const TextStyle(fontSize: 18)),
             // Removed the separate "Add Location" ElevatedButton.icon from here
           ],
         ),
@@ -169,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             right: 16.0,
             child: FloatingActionButton(
               onPressed: _toggleFab,
+              tooltip: _isFabOpen ? "Close Menu" : "Add New",
               child: AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
@@ -179,7 +182,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   );
                 },
               ),
-              tooltip: _isFabOpen ? "Close Menu" : "Add New",
             ),
           ),
         ],

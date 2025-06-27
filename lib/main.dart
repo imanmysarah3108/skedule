@@ -17,6 +17,8 @@ void main() async {
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -37,7 +39,7 @@ class _MyAppState extends State<MyApp> {
       } else if (event == AuthChangeEvent.signedOut) {
         // User just signed out, navigate to login
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
         );
       }
@@ -54,7 +56,7 @@ class _MyAppState extends State<MyApp> {
       ),
       // Determine the initial screen based on current session
       home: Supabase.instance.client.auth.currentUser == null
-          ? LoginScreen()
+          ? const LoginScreen()
           : HomeScreen(),
     );
   }

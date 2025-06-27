@@ -4,31 +4,33 @@ class AddLocationScreen extends StatelessWidget {
   final buildingController = TextEditingController();
   final roomController = TextEditingController();
 
+  AddLocationScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Add Location")),
+      appBar: AppBar(title: const Text("Add Location")),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: buildingController,
-              decoration: InputDecoration(labelText: "Building Name"), // Changed label
+              decoration: const InputDecoration(labelText: "Building Name"), // Changed label
             ),
             TextField(
               controller: roomController,
-              decoration: InputDecoration(labelText: "Room Number"), // Changed label
+              decoration: const InputDecoration(labelText: "Room Number"), // Changed label
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 // Will be added later - you can access values like:
                 // String buildingName = buildingController.text;
                 // String roomNumber = roomController.text;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Location Saved (not really yet 😅)"))); // Updated text
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location Saved (not really yet 😅)"))); // Updated text
               },
-              child: Text("Save Location"), // Changed text
+              child: const Text("Save Location"), // Changed text
             )
           ],
         ),

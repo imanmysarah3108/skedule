@@ -2,7 +2,7 @@ import 'package:flutter/material.dart'; // Added for @required in some Flutter v
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart'; // For NotificationDetails
+// For NotificationDetails
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =

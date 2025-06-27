@@ -13,7 +13,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // <--- ADD THIS LINE HERE for core library desugaring
+        // Enable core library desugaring for newer Java features on older Android versions.
         coreLibraryDesugaringEnabled true
     }
 
@@ -26,13 +26,12 @@ android {
         applicationId = "com.example.skedule"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23 
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 1
+        versionName = "1.0.0"
 
-        // <--- If you haven't already, add multiDexEnabled here.
-        // It's often needed with many dependencies or desugaring.
+        // Enable multidex to handle apps with a large number of methods (due to many dependencies).
         multiDexEnabled true
     }
 
@@ -49,11 +48,16 @@ flutter {
     source = "../.."
 }
 
-// <--- ADD THIS ENTIRE 'dependencies' BLOCK if it's not already present,
-// or add the 'coreLibraryDesugaring' line to your existing dependencies block.
+// IMPORTANT: This 'dependencies' block must be at the root level of this build.gradle file,
+// not inside the 'android' block.
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2' // Check Maven Central for the latest stable version if desired
-    // Your other dependencies will be here, like:
-    // implementation 'androidx.core:core-ktx:1.10.1' // Example
-    // implementation flutter.embedding // This is handled by dev.flutter.flutter-gradle-plugin now
+    // Required for core library desugaring to work.
+    // This allows you to use newer Java 8+ APIs (like Stream API, new Date/Time API)
+    // on devices running older Android versions (below API 26).
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2' // Current stable version, check Maven Central for newer if needed.
+
+    // Add any other specific Android dependencies here if you had them.
+    // For example, if you explicitly needed a Kotlin stdlib:
+    // implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    // (Note: $kotlin_version would be defined in your project-level build.gradle)
 }

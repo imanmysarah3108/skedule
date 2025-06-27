@@ -7,6 +7,8 @@ class RegisterScreen extends StatelessWidget {
   final passwordController = TextEditingController();
   final nameController = TextEditingController();
 
+  RegisterScreen({super.key});
+
   void register(BuildContext context) async {
     try {
       final res = await Supabase.instance.client.auth.signUp(
@@ -32,16 +34,16 @@ class RegisterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Register")),
+      appBar: AppBar(title: const Text("Register")),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: emailController, decoration: InputDecoration(labelText: "Email")),
-            TextField(controller: passwordController, obscureText: true, decoration: InputDecoration(labelText: "Password")),
-            TextField(controller: nameController, decoration: InputDecoration(labelText: "Full Name")),
-            SizedBox(height: 16),
-            ElevatedButton(onPressed: () => register(context), child: Text("Register")),
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
+            TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Password")),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: "Full Name")),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: () => register(context), child: const Text("Register")),
           ],
         ),
       ),
