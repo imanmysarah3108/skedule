@@ -11,8 +11,10 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        // <--- ADD THIS LINE HERE for core library desugaring
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -28,6 +30,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // <--- If you haven't already, add multiDexEnabled here.
+        // It's often needed with many dependencies or desugaring.
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -43,3 +49,11 @@ flutter {
     source = "../.."
 }
 
+// <--- ADD THIS ENTIRE 'dependencies' BLOCK if it's not already present,
+// or add the 'coreLibraryDesugaring' line to your existing dependencies block.
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2' // Check Maven Central for the latest stable version if desired
+    // Your other dependencies will be here, like:
+    // implementation 'androidx.core:core-ktx:1.10.1' // Example
+    // implementation flutter.embedding // This is handled by dev.flutter.flutter-gradle-plugin now
+}

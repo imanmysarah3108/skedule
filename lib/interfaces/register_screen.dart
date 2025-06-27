@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'interfaces/home_screen.dart';
+import 'home_screen.dart';
 
 class RegisterScreen extends StatelessWidget {
   final emailController = TextEditingController();
