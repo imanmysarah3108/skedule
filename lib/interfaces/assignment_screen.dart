@@ -13,45 +13,64 @@ class AssignmentsScreen extends StatefulWidget {
 
 class _AssignmentsScreenState extends State<AssignmentsScreen> {
   List<Map<String, dynamic>> _assignments = [];
-  bool _isLoading = true;
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   DateTime? _dueDate;
   String? _selectedSubject;
-  final List<String> _subjects = ['Mathematics', 'Science', 'History', 'Art'];
+  List<String> _subjects = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchAssignments();
+    _fetchData();
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+  Future<void> _fetchData() async {
+    await Future.wait([_fetchAssignments(), _fetchSubjects()]);
   }
 
   Future<void> _fetchAssignments() async {
-    setState(() => _isLoading = true);
     try {
       final userId = SupabaseService.client.auth.currentUser?.id;
       if (userId == null) return;
       
-      final assignments = await SupabaseService.getUserAssignments(userId)
-        .timeout(const Duration(seconds: 10));
-      
-      setState(() {
-        _assignments = assignments;
-        _isLoading = false;
-      });
+      final response = await SupabaseService.client
+          .from('assignments')
+          .select()
+          .eq('user_id', userId)
+          .order('due_date', ascending: true);
+
+      if (response != null) {
+        setState(() => _assignments = List<Map<String, dynamic>>.from(response));
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error fetching assignments: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchSubjects() async {
+    try {
+      final response = await SupabaseService.client
+          .from('subject')
+          .select('subject_id')
+          .order('subject_id', ascending: true);
+
+      if (response != null) {
+        setState(() {
+          _subjects = response
+              .map<String>((subject) => subject['subject_id'] as String)
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching subjects: $e')),
         );
       }
     }
@@ -79,25 +98,32 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     }
 
     try {
-      await Supabase.instance.client.from('assignments').insert({
+      final userId = SupabaseService.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      await SupabaseService.client.from('assignments').insert({
         'title': _titleController.text,
         'description': _descriptionController.text,
         'due_date': _dueDate!.toIso8601String(),
         'subject': _selectedSubject,
         'is_completed': false,
+        'user_id': userId,
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      // Clear form and refresh list
       _titleController.clear();
       _descriptionController.clear();
-      setState(() => _dueDate = null);
+      setState(() {
+        _dueDate = null;
+        _selectedSubject = null;
+      });
       await _fetchAssignments();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Assignment added successfully')),
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -110,7 +136,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
   Future<void> _toggleComplete(int id, bool currentStatus) async {
     try {
-      await Supabase.instance.client
+      await SupabaseService.client
           .from('assignments')
           .update({'is_completed': !currentStatus})
           .eq('id', id);
@@ -126,7 +152,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
   Future<void> _deleteAssignment(int id) async {
     try {
-      await Supabase.instance.client
+      await SupabaseService.client
           .from('assignments')
           .delete()
           .eq('id', id);
@@ -151,7 +177,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _fetchAssignments,
+            onPressed: _fetchData,
           ),
         ],
       ),
@@ -160,145 +186,144 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         onPressed: () => _showAddAssignmentDialog(context),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _assignments.isEmpty
-              ? Center(
-                  child: Text(
-                    'No assignments yet!\nTap + to add one',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.text.withOpacity(0.5),
-                      fontSize: 18,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _assignments.length,
-                  itemBuilder: (context, index) {
-                    final assignment = _assignments[index];
-                    final dueDate = DateTime.parse(assignment['due_date']);
-                    final isOverdue = dueDate.isBefore(DateTime.now()) &&
-                        !assignment['is_completed'];
-                    final isCompleted = assignment['is_completed'];
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      body: _assignments.isEmpty
+          ? Center(
+              child: Text(
+                'No assignments yet!\nTap + to add one',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.text.withOpacity(0.5),
+                  fontSize: 18,
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _assignments.length,
+              itemBuilder: (context, index) {
+                final assignment = _assignments[index];
+                final dueDate = DateTime.parse(assignment['due_date']);
+                final isOverdue = dueDate.isBefore(DateTime.now()) &&
+                    !assignment['is_completed'];
+                final isCompleted = assignment['is_completed'];
 
-                    return Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      color: AppColors.card,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                return Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  color: AppColors.card,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            Flexible(
+                              child: Text(
+                                assignment['title'],
+                                style: TextStyle(
+                                  color: AppColors.text,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                            ),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    assignment['title'],
-                                    style: TextStyle(
-                                      color: AppColors.text,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
+                                IconButton(
+                                  icon: Icon(
+                                    isCompleted
+                                        ? Icons.check_circle
+                                        : Icons.radio_button_unchecked,
+                                    color: isCompleted
+                                        ? Colors.green
+                                        : AppColors.primary,
+                                  ),
+                                  onPressed: () => _toggleComplete(
+                                    assignment['id'],
+                                    assignment['is_completed'],
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        isCompleted
-                                            ? Icons.check_circle
-                                            : Icons.radio_button_unchecked,
-                                        color: isCompleted
-                                            ? Colors.green
-                                            : AppColors.primary,
-                                      ),
-                                      onPressed: () => _toggleComplete(
-                                        assignment['id'],
-                                        assignment['is_completed'],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete,
-                                          color: Colors.red),
-                                      onPressed: () => _deleteAssignment(
-                                          assignment['id']),
-                                    ),
-                                  ],
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () => _deleteAssignment(
+                                      assignment['id']),
                                 ),
                               ],
                             ),
-                            if (assignment['description'] != null &&
-                                assignment['description'].isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  assignment['description'],
-                                  style: TextStyle(
-                                    color: AppColors.text.withOpacity(0.7),
-                                    decoration: isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.subject,
-                                    size: 16,
-                                    color: AppColors.secondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    assignment['subject'] ?? 'No Subject',
-                                    style: TextStyle(
-                                      color: AppColors.secondary,
-                                      decoration: isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 16,
-                                    color: isOverdue
-                                        ? Colors.red
-                                        : AppColors.secondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    DateFormat('MMM dd, yyyy').format(dueDate),
-                                    style: TextStyle(
-                                      color: isOverdue
-                                          ? Colors.red
-                                          : AppColors.secondary,
-                                      decoration: isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
+                        if (assignment['description'] != null &&
+                            assignment['description'].isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              assignment['description'],
+                              style: TextStyle(
+                                color: AppColors.text.withOpacity(0.7),
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.subject,
+                                size: 16,
+                                color: AppColors.secondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                assignment['subject'] ?? 'No Subject',
+                                style: TextStyle(
+                                  color: AppColors.secondary,
+                                  decoration: isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 16,
+                                color: isOverdue
+                                    ? Colors.red
+                                    : AppColors.secondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat('MMM dd, yyyy').format(dueDate),
+                                style: TextStyle(
+                                  color: isOverdue
+                                      ? Colors.red
+                                      : AppColors.secondary,
+                                  decoration: isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 
@@ -341,7 +366,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                     ),
                     items: _subjects
                         .map((subject) => DropdownMenuItem(
-                              value: subject,
+                              value: _selectedSubject,
                               child: Text(subject),
                             ))
                         .toList(),
@@ -381,10 +406,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                await _addAssignment();
-                if (mounted) Navigator.pop(context);
-              },
+              onPressed: _addAssignment,
               child: const Text('Save'),
             ),
           ],

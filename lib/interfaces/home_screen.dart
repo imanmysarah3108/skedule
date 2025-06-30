@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skedule/interfaces/add_subject_screen.dart';
 import 'package:skedule/interfaces/notification.inbox.dart';
 import 'login_screen.dart';
 import 'add_class_screen.dart';    // The new AddClassScreen with dropdowns, time picker, etc. // The screen for adding Building Name and Room Number  // The screen for adding Subject Name and Teacher Name
@@ -145,15 +146,41 @@ appBar: AppBar(
     ),
   ),
   floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-  floatingActionButton: FloatingActionButton.extended(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => AddClassScreen()),
-      );
-    },
-    icon: Icon(Icons.add),
-    label: Text("Add Class"),
+  floatingActionButton: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (_isFabOpen)
+        _buildSubFab(
+          icon: Icons.class_,
+          label: "Add Class",
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddClassScreen()),
+            );
+          },
+          delay: 0.0,
+        ),
+      if (_isFabOpen)
+        _buildSubFab(
+          icon: Icons.book,
+          label: "Add Subject",
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddSubjectScreen()),
+            );
+          },
+          delay: 0.1,
+        ),
+      FloatingActionButton(
+        onPressed: _toggleFab,
+        child: AnimatedIcon(
+          icon: AnimatedIcons.add_event,
+          progress: _animationController,
+        ),
+      ),
+    ],
   ),
 );
 }

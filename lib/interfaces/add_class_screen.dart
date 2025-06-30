@@ -11,30 +11,59 @@ class AddClassScreen extends StatefulWidget {
 
 class _AddClassScreenState extends State<AddClassScreen> {
   // Controllers
-  final _subjectController = TextEditingController();
   final _buildingController = TextEditingController();
   final _roomController = TextEditingController();
   final _lecturerController = TextEditingController();
 
   // Form state
+  String? _selectedSubject;
   String? _selectedDay;
   String? _selectedClassType = 'Lecture';
   TimeOfDay? _startTime, _endTime;
   bool _reminderEnabled = false;
   Color _selectedColor = Colors.blue;
   bool _isSaving = false;
+  List<String> _subjects = [];
 
   // Predefined options
   static const _daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   static const _classTypes = ['Lecture', 'Lab'];
 
   @override
+  void initState() {
+    super.initState();
+    _fetchSubjects();
+  }
+
+  @override
   void dispose() {
-    _subjectController.dispose();
     _buildingController.dispose();
     _roomController.dispose();
     _lecturerController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchSubjects() async {
+    try {
+      final response = await SupabaseService.client
+          .from('subject')
+          .select('subject_id')
+          .order('subject_id', ascending: true);
+
+      if (response != null) {
+        setState(() {
+          _subjects = response
+              .map<String>((subject) => subject['subject_id'] as String)
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching subjects: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
@@ -90,7 +119,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
   }
 
   bool _validateForm() {
-    if (_subjectController.text.isEmpty ||
+    if (_selectedSubject == null ||
         _buildingController.text.isEmpty ||
         _roomController.text.isEmpty ||
         _selectedDay == null ||
@@ -108,8 +137,8 @@ class _AddClassScreenState extends State<AddClassScreen> {
     final userId = SupabaseService.client.auth.currentUser?.id;
     if (userId == null) return;
 
-    // Create subject if needed
-    final subjectId = await _getOrCreateSubjectId();
+    // Get subject ID
+    final subjectId = await _getSubjectId();
 
     // Format times
     final now = DateTime.now();
@@ -131,22 +160,14 @@ class _AddClassScreenState extends State<AddClassScreen> {
     });
   }
 
-  Future<String> _getOrCreateSubjectId() async {
-    final existing = await SupabaseService.client
+  Future<String> _getSubjectId() async {
+    final response = await SupabaseService.client
         .from('subject')
         .select('subject_id')
-        .eq('subject_title', _subjectController.text)
-        .maybeSingle();
-
-    if (existing != null) return existing['subject_id'];
-
-    final newSubject = await SupabaseService.client
-        .from('subject')
-        .insert({'subject_title': _subjectController.text})
-        .select()
+        .eq('subject_title', _selectedSubject!)
         .single();
 
-    return newSubject['subject_id'];
+    return response['subject_id'];
   }
 
   @override
@@ -159,7 +180,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildTextField(_subjectController, "Subject", "Enter subject name", Icons.subject),
+                  _buildSubjectDropdown(),
                   const SizedBox(height: 16),
                   _buildTextField(_buildingController, "Building", "Enter building name", Icons.business),
                   const SizedBox(height: 16),
@@ -200,6 +221,28 @@ class _AddClassScreenState extends State<AddClassScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildSubjectDropdown() {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: "Subject",
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.subject),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedSubject,
+          isExpanded: true,
+          hint: const Text("Select Subject"),
+          items: _subjects.map((subject) => DropdownMenuItem(
+            value: subject,
+            child: Text(subject),
+          )).toList(),
+          onChanged: (value) => setState(() => _selectedSubject = value),
+        ),
+      ),
     );
   }
 
