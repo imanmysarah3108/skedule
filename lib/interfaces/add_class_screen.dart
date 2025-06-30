@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For formatting TimeOfDay
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:skedule/supabase_service.dart';
 
 class AddClassScreen extends StatefulWidget {
   const AddClassScreen({super.key});
@@ -9,196 +10,259 @@ class AddClassScreen extends StatefulWidget {
 }
 
 class _AddClassScreenState extends State<AddClassScreen> {
-  // Controllers for optional text input fields (not explicitly requested, but good practice if needed)
-  // final classNameController = TextEditingController(); // Example if you want a class name text input
+  // Controllers
+  final _subjectController = TextEditingController();
+  final _buildingController = TextEditingController();
+  final _roomController = TextEditingController();
+  final _lecturerController = TextEditingController();
 
-  // Dropdown states
-  String? _selectedSubject;
-  String? _selectedLocation;
-  String? _selectedClassType = 'Lecture'; // Default value
-
-  // Time picker states
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
-
-  // Toggle state
+  // Form state
+  String? _selectedDay;
+  String? _selectedClassType = 'Lecture';
+  TimeOfDay? _startTime, _endTime;
   bool _reminderEnabled = false;
+  Color _selectedColor = Colors.blue;
+  bool _isSaving = false;
 
-  // Temporary dummy lists for dropdowns (will be populated from database later)
-  final List<String> _subjects = ['Mathematics', 'Science', 'History', 'Art'];
-  final List<String> _locations = ['Building A - Room 101', 'Building B - Lab 205', 'Online'];
-  final List<String> _classTypes = ['Lecture', 'Lab'];
+  // Predefined options
+  static const _daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  static const _classTypes = ['Lecture', 'Lab'];
 
-  // Function to show the time picker
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _buildingController.dispose();
+    _roomController.dispose();
+    _lecturerController.dispose();
+    super.dispose();
+  }
+
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
-      initialTime: isStartTime
-          ? (_startTime ?? TimeOfDay.now())
-          : (_endTime ?? TimeOfDay.now().plusHours(1)), // Default end time 1 hour after start
-      builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false), // Set to true for 24-hour format
-          child: child!,
-        );
-      },
+      initialTime: isStartTime 
+          ? _startTime ?? TimeOfDay.now()
+          : _endTime ?? (_startTime?.plusHours(1) ?? TimeOfDay.now().plusHours(1)),
     );
     if (picked != null) {
-      setState(() {
-        if (isStartTime) {
-          _startTime = picked;
-        } else {
-          _endTime = picked;
-        }
-      });
+      setState(() => isStartTime ? _startTime = picked : _endTime = picked);
     }
+  }
+
+  void _showColorPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pick a color'),
+        content: SingleChildScrollView(
+          child: BlockPicker(
+            pickerColor: _selectedColor,
+            onColorChanged: (color) => setState(() => _selectedColor = color),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveClass() async {
+    if (!_validateForm()) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      await _saveClassToDatabase();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  bool _validateForm() {
+    if (_subjectController.text.isEmpty ||
+        _buildingController.text.isEmpty ||
+        _roomController.text.isEmpty ||
+        _selectedDay == null ||
+        _startTime == null ||
+        _endTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _saveClassToDatabase() async {
+    final userId = SupabaseService.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    // Create subject if needed
+    final subjectId = await _getOrCreateSubjectId();
+
+    // Format times
+    final now = DateTime.now();
+    final startTime = DateTime(now.year, now.month, now.day, _startTime!.hour, _startTime!.minute);
+    final endTime = DateTime(now.year, now.month, now.day, _endTime!.hour, _endTime!.minute);
+
+    await SupabaseService.client.from('classes').insert({
+      'user_id': userId,
+      'subject_id': subjectId,
+      'class_type': _selectedClassType,
+      'building': _buildingController.text,
+      'room': _roomController.text,
+      'lecturer': _lecturerController.text,
+      'day': _selectedDay,
+      'start_time': startTime.toIso8601String(),
+      'end_time': endTime.toIso8601String(),
+      'color_hex': '#${_selectedColor.value.toRadixString(16).substring(2, 8)}',
+      'reminder': _reminderEnabled,
+    });
+  }
+
+  Future<String> _getOrCreateSubjectId() async {
+    final existing = await SupabaseService.client
+        .from('subject')
+        .select('subject_id')
+        .eq('subject_title', _subjectController.text)
+        .maybeSingle();
+
+    if (existing != null) return existing['subject_id'];
+
+    final newSubject = await SupabaseService.client
+        .from('subject')
+        .insert({'subject_title': _subjectController.text})
+        .select()
+        .single();
+
+    return newSubject['subject_id'];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Add Class")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView( // Use SingleChildScrollView for scrollability if content overflows
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children horizontally
-            children: [
-              // Subject Dropdown
-              _buildDropdown(
-                label: "Select Subject",
-                value: _selectedSubject,
-                items: _subjects,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedSubject = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Location Dropdown
-              _buildDropdown(
-                label: "Select Location",
-                value: _selectedLocation,
-                items: _locations,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLocation = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Class Type Dropdown
-              _buildDropdown(
-                label: "Class Type",
-                value: _selectedClassType,
-                items: _classTypes,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedClassType = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Time Pickers
-              const Text("Class Time", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Row(
+      body: _isSaving 
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: _buildTimePickerField(context, "Start Time", _startTime, true),
+                  _buildTextField(_subjectController, "Subject", "Enter subject name", Icons.subject),
+                  const SizedBox(height: 16),
+                  _buildTextField(_buildingController, "Building", "Enter building name", Icons.business),
+                  const SizedBox(height: 16),
+                  _buildTextField(_roomController, "Room", "Enter room number", Icons.meeting_room),
+                  const SizedBox(height: 16),
+                  _buildTextField(_lecturerController, "Lecturer (Optional)", "Enter lecturer name", Icons.person),
+                  const SizedBox(height: 16),
+                  _buildDropdown("Day", _selectedDay, _daysOfWeek, Icons.calendar_today, 
+                      (v) => setState(() => _selectedDay = v)),
+                  const SizedBox(height: 16),
+                  _buildDropdown("Class Type", _selectedClassType, _classTypes, Icons.class_, 
+                      (v) => setState(() => _selectedClassType = v)),
+                  const SizedBox(height: 16),
+                  _buildColorPicker(),
+                  const SizedBox(height: 16),
+                  const Text("Class Time", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTimePicker("Start Time", _startTime, true)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildTimePicker("End Time", _endTime, false)),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildTimePickerField(context, "End Time", _endTime, false),
+                  const SizedBox(height: 16),
+                  _buildReminderToggle(),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _saveClass,
+                    icon: _isSaving 
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator())
+                        : const Icon(Icons.save),
+                    label: Text(_isSaving ? "Saving..." : "Save Class"),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+            ),
+    );
+  }
 
-              // Reminder Toggle
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Enable Reminder", style: TextStyle(fontSize: 16)),
-                  Switch(
-                    value: _reminderEnabled,
-                    onChanged: (bool value) {
-                      setState(() {
-                        _reminderEnabled = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              // Save Class Button
-              ElevatedButton.icon(
-                onPressed: () {
-                  // Access the selected values here:
-                  // print('Subject: $_selectedSubject');
-                  // print('Location: $_selectedLocation');
-                  // print('Class Type: $_selectedClassType');
-                  // print('Start Time: ${_startTime?.format(context)}');
-                  // print('End Time: ${_endTime?.format(context)}');
-                  // print('Reminder Enabled: $_reminderEnabled');
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Class saved (conceptually)! Check debug console for values.")),
-                  );
-                },
-                icon: const Icon(Icons.save), // Changed icon to save
-                label: const Text("Save Class"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  textStyle: const TextStyle(fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildTextField(TextEditingController controller, String label, String hint, IconData icon) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
       ),
     );
   }
 
-  // Helper method to build consistent dropdowns
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
+  Widget _buildDropdown(String label, String? value, List<String> items, IconData icon, ValueChanged<String?> onChanged) {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        prefixIcon: Icon(icon),
       ),
-      isEmpty: value == null,
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: onChanged,
-          items: items.map<DropdownMenuItem<String>>((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
         ),
       ),
     );
   }
 
-  // Helper method to build consistent time picker fields
-  Widget _buildTimePickerField(
-      BuildContext context, String label, TimeOfDay? time, bool isStartTime) {
-    return InkWell( // Use InkWell to make the text field tappable
+  Widget _buildColorPicker() {
+    return InkWell(
+      onTap: _showColorPicker,
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: "Class Color",
+          border: OutlineInputBorder(),
+          prefixIcon: Icon(Icons.color_lens),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _selectedColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black54),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text('#${_selectedColor.value.toRadixString(16).substring(2, 8)}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePicker(String label, TimeOfDay? time, bool isStartTime) {
+    return InkWell(
       onTap: () => _selectTime(context, isStartTime),
       child: InputDecorator(
         decoration: InputDecoration(
@@ -207,20 +271,30 @@ class _AddClassScreenState extends State<AddClassScreen> {
           suffixIcon: const Icon(Icons.access_time),
         ),
         child: Text(
-          time == null ? 'Select Time' : time.format(context),
-          style: TextStyle(fontSize: 16, color: time == null ? Colors.grey[700] : Colors.black),
+          time?.format(context) ?? 'Select Time',
+          style: TextStyle(color: time == null ? Colors.grey[600] : null),
         ),
       ),
     );
   }
+
+  Widget _buildReminderToggle() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text("Enable Reminder", style: TextStyle(fontSize: 16)),
+        Switch(
+          value: _reminderEnabled,
+          onChanged: (v) => setState(() => _reminderEnabled = v),
+        ),
+      ],
+    );
+  }
 }
 
-// Extension to add hours to TimeOfDay (for initial end time)
 extension TimeOfDayExtension on TimeOfDay {
   TimeOfDay plusHours(int hours) {
-    int totalMinutes = hour * 60 + minute + hours * 60;
-    int newHour = (totalMinutes ~/ 60) % 24;
-    int newMinute = totalMinutes % 60;
-    return TimeOfDay(hour: newHour, minute: newMinute);
+    final minutes = hour * 60 + minute + hours * 60;
+    return TimeOfDay(hour: minutes ~/ 60 % 24, minute: minutes % 60);
   }
 }

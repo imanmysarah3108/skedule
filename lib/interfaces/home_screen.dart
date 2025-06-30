@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:skedule/interfaces/notification.inbox.dart';
 import 'login_screen.dart';
-import 'add_class_screen.dart';    // The new AddClassScreen with dropdowns, time picker, etc.
-import 'add_location_screen.dart'; // The screen for adding Building Name and Room Number
-import 'add_subject_screen.dart';  // The screen for adding Subject Name and Teacher Name
+import 'add_class_screen.dart';    // The new AddClassScreen with dropdowns, time picker, etc. // The screen for adding Building Name and Room Number  // The screen for adding Subject Name and Teacher Name
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -113,79 +112,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Skedule - Home"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => logout(context),
-            tooltip: "Logout",
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Welcome, $userName!", style: const TextStyle(fontSize: 18)),
-            // Removed the separate "Add Location" ElevatedButton.icon from here
-          ],
-        ),
-      ),
-      floatingActionButton: Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          // Sub-FABs (conditionally visible and animated)
-          if (_isFabOpen) ...[
-            Positioned(
-              bottom: 80.0, // Adjust position based on button size and spacing
-              right: 4.0,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end, // Align labels to the right
-                children: [
-                  _buildSubFab(
-                    icon: Icons.class_,
-                    label: "Add Subject",
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddSubjectScreen())),
-                    delay: 0.0, // Animation delay (can be adjusted)
-                  ),
-                  _buildSubFab(
-                    icon: Icons.business,
-                    label: "Add Location",
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddLocationScreen())),
-                    delay: 0.1,
-                  ),
-                  _buildSubFab(
-                    icon: Icons.add, // Or Icons.calendar_today, Icons.event
-                    label: "Add Class",
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddClassScreen())),
-                    delay: 0.2,
-                  ),
-                ],
-              ),
-            ),
-          ],
-          // Main FAB
-          Positioned(
-            bottom: 16.0,
-            right: 16.0,
-            child: FloatingActionButton(
-              onPressed: _toggleFab,
-              tooltip: _isFabOpen ? "Close Menu" : "Add New",
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  // Rotate the icon based on animation progress
-                  return Transform.rotate(
-                    angle: _animation.value * (2 * 3.1415926535), // Rotate 360 degrees
-                    child: Icon(_isFabOpen ? Icons.close : Icons.add),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Replace the logout button in the appBar with a notification icon
+appBar: AppBar(
+  title: const Text(
+    "Skedule",
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 24,
+    ),
+  ),
+  backgroundColor: Color.fromARGB(255, 118, 51, 157),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.notifications),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => NotificationInboxScreen()),
+        );
+      },
+      tooltip: "Notifications",
+    ),
+  ],
+  iconTheme: const IconThemeData(color: Colors.white),
+),
+  body: Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text("Welcome, $userName!", style: const TextStyle(fontSize: 18)),
+      ],
+    ),
+  ),
+  floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+  floatingActionButton: FloatingActionButton.extended(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => AddClassScreen()),
+      );
+    },
+    icon: Icon(Icons.add),
+    label: Text("Add Class"),
+  ),
+);
+}
 }
