@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final response = await Supabase.instance.client
           .from('user_profile')
           .select('name')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single();
 
       setState(() {

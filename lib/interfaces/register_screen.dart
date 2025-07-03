@@ -19,7 +19,7 @@ class RegisterScreen extends StatelessWidget {
       final user = res.user;
       if (user != null) {
         await Supabase.instance.client.from('user_profile').insert({
-          'id': user.id,
+          'user_id': user.id,
           'email': user.email,
           'name': nameController.text.trim(),
         });

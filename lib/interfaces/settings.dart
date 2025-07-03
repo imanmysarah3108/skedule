@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skedule/providers.dart';
 import 'package:skedule/theme/colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase
+import 'package:skedule/interfaces/login_screen.dart'; // Import LoginScreen
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -54,8 +56,8 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
-          // Font Size
+
+          // Font Size Slider
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
@@ -68,7 +70,7 @@ class SettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Font Size',
+                    'Font Size: ${fontProvider.fontSize.toInt()}',
                     style: TextStyle(
                       color: AppColors.text,
                       fontSize: fontProvider.fontSize,
@@ -77,21 +79,23 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   Slider(
                     value: fontProvider.fontSize,
-                    min: 14,
+                    min: 12,
                     max: 24,
-                    divisions: 5,
+                    divisions: 4,
+                    label: fontProvider.fontSize.round().toString(),
                     onChanged: (value) {
                       fontProvider.setFontSize(value);
                     },
                     activeColor: AppColors.primary,
+                    inactiveColor: AppColors.secondary.withOpacity(0.3),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          
-          // Font Family
+
+          // Font Family Dropdown
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
@@ -100,8 +104,8 @@ class SettingsScreen extends StatelessWidget {
             color: AppColors.card,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Font Family',
@@ -111,7 +115,6 @@ class SettingsScreen extends StatelessWidget {
                       fontFamily: fontProvider.fontFamily,
                     ),
                   ),
-                  const SizedBox(height: 8),
                   DropdownButton<String>(
                     value: fontProvider.fontFamily,
                     items: const [
@@ -120,8 +123,12 @@ class SettingsScreen extends StatelessWidget {
                         child: Text('Roboto'),
                       ),
                       DropdownMenuItem(
-                        value: 'OpenSans',
+                        value: 'Open Sans',
                         child: Text('Open Sans'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Lato',
+                        child: Text('Lato'),
                       ),
                       DropdownMenuItem(
                         value: 'Montserrat',
@@ -148,8 +155,20 @@ class SettingsScreen extends StatelessWidget {
           // Logout Button
           Center(
             child: ElevatedButton(
-              onPressed: () {
-                // Implement logout logic
+              onPressed: () async {
+                try {
+                  await Supabase.instance.client.auth.signOut();
+                  // Navigate to LoginScreen and remove all previous routes
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                } catch (e) {
+                  // Handle logout error (e.g., show a snackbar)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout error: $e')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
